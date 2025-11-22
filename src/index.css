@@ -1,0 +1,25 @@
+
+video {
+  -webkit-app-region: drag;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+html {
+  overflow: hidden;
+}
+
+#close-btn {
+  display: none;
+  z-index: 10;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2rem;
+  height: 2rem;
+  background-color: rgb(227, 140, 140);
+  -webkit-app-region: no-drag;
+}
