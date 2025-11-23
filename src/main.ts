@@ -16,12 +16,12 @@ const argv = yargs(hideBin(process.argv))
   .usage('Usage: $0 [options]')
   .option('win-width', {
     number: true,
-    default: 480,
+    default: 320,
     description: 'Set the width of the window',
   })
   .option('win-height', {
     number: true,
-    default: 320,
+    default: 240,
     description: 'Set the height of the window',
   })
   .option('audio', {
@@ -130,14 +130,14 @@ const createWindow = () => {
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
+    // Open the DevTools.
+    mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
     )
   }
 
-  // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
   if (argv.hide) {
     mainWindow.hide()
   }

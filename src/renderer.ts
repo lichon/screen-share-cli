@@ -1,5 +1,11 @@
-import { send } from 'vite'
 import './index.css'
+
+const ICESERVER = {
+  urls: [
+    'stun:stun.cloudflare.com:3478',
+    'stun:stun.nextcloud.com:443',
+  ]
+}
 
 const log = (...args: any[]) => {
   // @ts-ignore
@@ -23,14 +29,35 @@ const sendAnswer = (sdp: string) => {
 
 // @ts-ignore
 window.api.onStart((args) => {
-  log('start with args', args)
-  const closeBtn = document.getElementById('close-btn')
-  closeBtn.addEventListener('click', () => {
-    close('user-closed')
-  })
+  if (!args.offer) {
+    close('offer-not-provided')
+    return
+  }
+  const hasVideo = args.offer.indexOf('a=video') !== -1
+  const hasAudio = args.offer.indexOf('a=audio') !== -1
+  if (hasAudio || hasVideo) {
+    close('offer-includes-media')
+    return
+  }
+  const offerSdp = atob(args.offer)
+  if (!offerSdp) {
+    close('invalid-offer')
+    return
+  }
 
+  startMedia(args).then((stream) => {
+    const pc = createPeerConnection(stream)
+    createAnswer(pc, offerSdp).then(() => {
+      sendAnswer(pc.localDescription!.sdp!)
+    })
+  }).catch((e) => {
+    close('failed-to-start-media')
+  })
+})
+
+const startMedia = async (args: any): Promise<MediaStream> => {
   const mediaArgs = {
-    audio: args.audio || false,
+    audio: args.audio || true,
     video: {
       frameRate: args.fps || 30,
       width: args.width || undefined,
@@ -38,12 +65,17 @@ window.api.onStart((args) => {
     }
   }
 
+  const closeBtn = document.getElementById('close-btn')
+  closeBtn.addEventListener('click', () => {
+    close('user-closed')
+  })
+
   const video = document.querySelector('video')
   video.onloadeddata = () => {
     if (args.showClose) closeBtn.style.display = 'block'
   }
 
-  new Promise<MediaStream>((resolve, reject) => {
+  return new Promise<MediaStream>((resolve, reject) => {
     if (args.camera) {
       navigator.mediaDevices.getUserMedia(mediaArgs).then(stream => {
         if (!args.hide) video.srcObject = stream
@@ -59,18 +91,8 @@ window.api.onStart((args) => {
         reject(e)
       })
     }
-  }).then((mediaStream) => {
-    const pc = createPeerConnection(mediaStream)
-    if (args.offer) {
-      createAnswer(pc, args.offer)
-    } else {
-      (window as unknown as { pc: any }).pc = pc
-      createOffer(pc)
-    }
-  }).catch(e => {
-    close('failed-to-get-media-stream')
   })
-})
+}
 
 // @ts-ignore
 window.api.onAnswer((sdp: string) => {
@@ -83,42 +105,57 @@ window.api.onAnswer((sdp: string) => {
   })
 })
 
-const createPeerConnection = (mediaStream: MediaStream) => {
-  const pc = new RTCPeerConnection({
-    iceServers: [{
-      urls: [
-        'stun:stun.cloudflare.com:3478',
-        'stun:stun.nextcloud.com:443',
-      ]
-    }]
-  })
-  mediaStream.getTracks().forEach(track => {
-    pc.addTrack(track, mediaStream)
-  })
+const createPeerConnection = (mediaStream?: MediaStream) => {
+  const pc = new RTCPeerConnection({ iceServers: [ICESERVER] })
+  let mediaPc: RTCPeerConnection | null = null
   pc.onconnectionstatechange = () => {
     log('connection state', pc.connectionState)
     if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
       close('connection-state-' + pc.connectionState)
     }
   }
+  pc.ondatachannel = (event) => {
+    const channel = event.channel
+    channel.onopen = () => {
+      // wait for next request
+    }
+    channel.onmessage = (e) => {
+      const offer = JSON.parse(e.data)
+      if (offer.type !== 'offer') {
+        log('unknown data channel message', e.data)
+        return
+      }
+      mediaPc = new RTCPeerConnection({ iceServers: [ICESERVER] })
+      mediaStream.getTracks().forEach(track => {
+        mediaPc.addTrack(track, mediaStream)
+      })
+      createAnswer(mediaPc, offer.sdp).then(() => {
+        channel.send(JSON.stringify(mediaPc.localDescription!.toJSON()))
+      })
+    }
+    channel.onclose = () => {
+      mediaPc.close()
+      log('data channel closed')
+    }
+  }
   return pc
 }
 
-const createAnswer = (pc: RTCPeerConnection, offerSdp: string) => {
-  pc.setRemoteDescription(new RTCSessionDescription({
+const createAnswer = async (pc: RTCPeerConnection, offerSdp: string): Promise<void> => {
+  return pc.setRemoteDescription(new RTCSessionDescription({
     type: 'offer',
     sdp: offerSdp
   })).then(() => {
     return pc.createAnswer()
   }).then(answer => {
-    sendAnswer(answer.sdp!)
     return pc.setLocalDescription(answer)
   }).catch(e => {
+    log('error creating answer', e)
     close('failed-to-set-offer')
   })
 }
 
-const createOffer = (pc: RTCPeerConnection) => {
+const _createOffer = (pc: RTCPeerConnection) => {
   // wait for candidate
   let sent = false
   pc.onicegatheringstatechange = () => {
@@ -132,7 +169,7 @@ const createOffer = (pc: RTCPeerConnection) => {
     if (sent) return
     sent = true
     sendOffer(pc.localDescription!.sdp!)
-  }, 5000)
+  }, 1000)
 
   pc.createOffer().then(offer => {
     pc.setLocalDescription(offer)
