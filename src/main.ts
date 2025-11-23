@@ -9,9 +9,21 @@ if (started) {
   app.quit()
 }
 
+const hasOfferArg = process.argv.some((arg) => arg === '--offer' || arg === '-o')
+
 const argv = yargs(hideBin(process.argv))
   .scriptName('screen-share-cli')
   .usage('Usage: $0 [options]')
+  .option('win-width', {
+    number: true,
+    default: 480,
+    description: 'Set the width of the window',
+  })
+  .option('win-height', {
+    number: true,
+    default: 320,
+    description: 'Set the height of the window',
+  })
   .option('audio', {
     boolean: true,
     default: false,
@@ -47,8 +59,13 @@ const argv = yargs(hideBin(process.argv))
   })
   .option('show-close', {
     boolean: true,
-    default: false,
+    default: !hasOfferArg,
     description: 'Show close button',
+  })
+  .option('offer', {
+    alias: 'o',
+    string: true,
+    description: 'Set offer SDP for WebRTC',
   })
   .help()
   .alias('help', 'h')
@@ -63,8 +80,8 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: argv.hide ? 0 : 480,
-    height: argv.hide ? 0 : 320,
+    width: argv.hide ? 0 : argv.winWidth,
+    height: argv.hide ? 0 : argv.winHeight,
     frame: false,
     transparent: true,
     skipTaskbar: true,
@@ -86,12 +103,28 @@ const createWindow = () => {
     e.preventDefault()
   })
 
-  ipcMain.on('close', () => {
+  // can not read from stdin in packaged electron app
+  // TODO use custom node starter and ipc to read from stdin
+  ipcMain.on('offer', (e, offer) => {
+    const b64 = Buffer.from(offer).toString('base64')
+    process.stdout.write('\u001b9\u0007::SSC:OFFER:' + b64 + '.\r\n')
+  })
+
+  ipcMain.on('answer', (e, answer) => {
+    const b64 = Buffer.from(answer).toString('base64')
+    process.stdout.write('\u001b9\u0007::SSC:ANSWER:' + b64 + '.\r\n')
+  })
+
+  ipcMain.on('close', (e, reason) => {
+    process.stdout.write('\u001b9\u0007::SSC:CLOSE:' + reason + '.\r\n')
     mainWindow.close()
+    app.quit()
   })
 
   ipcMain.on('log', (e, ...args) => {
-    console.error(...args)
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+      console.log(...args)
+    }
   })
 
   // and load the index.html of the app.
@@ -105,6 +138,9 @@ const createWindow = () => {
 
   // Open the DevTools.
   // mainWindow.webContents.openDevTools()
+  if (argv.hide) {
+    mainWindow.hide()
+  }
 
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.send('start', argv)
@@ -120,17 +156,7 @@ app.on('ready', createWindow)
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-app.on('activate', () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow()
-  }
+  app.quit()
 })
 
 // In this file you can include the rest of your app's specific main process

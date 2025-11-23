@@ -29,9 +29,9 @@
     "@electron-forge/plugin-vite": "^7.10.2",
     "@electron/fuses": "^1.8.0",
     "@types/electron-squirrel-startup": "^1.0.2",
+    "@types/yargs": "^17.0.35",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
-    "@types/yargs": "^17.0.35",
     "electron": "39.2.3",
     "eslint": "^9.39.1",
     "eslint-plugin-import": "^2.32.0",
@@ -43,6 +43,8 @@
     "yargs": "^17.7.2"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["electron"]
+    "onlyBuiltDependencies": [
+      "electron"
+    ]
   }
 }
