@@ -29,27 +29,24 @@ const sendAnswer = (sdp: string) => {
 
 // @ts-ignore
 window.api.onStart((args) => {
-  if (!args.offer) {
-    close('offer-not-provided')
-    return
-  }
-  const hasVideo = args.offer.indexOf('a=video') !== -1
-  const hasAudio = args.offer.indexOf('a=audio') !== -1
+  const hasVideo = args.offer?.includes('a=video')
+  const hasAudio = args.offer?.includes('a=audio')
   if (hasAudio || hasVideo) {
     close('offer-includes-media')
     return
   }
-  const offerSdp = atob(args.offer)
-  if (!offerSdp) {
-    close('invalid-offer')
-    return
-  }
+  const offerSdp = atob(args.offer || '')
 
   startMedia(args).then((stream) => {
     const pc = createPeerConnection(stream)
-    createAnswer(pc, offerSdp).then(() => {
-      sendAnswer(pc.localDescription!.sdp!)
-    })
+    log('created peer connection, got stream')
+    if (offerSdp) {
+      createAnswer(pc, offerSdp).then(() => {
+        sendAnswer(pc.localDescription!.sdp!)
+      })
+    } else {
+      createOffer(pc)
+    }
   }).catch((e) => {
     close('failed-to-start-media')
   })
@@ -65,16 +62,7 @@ const startMedia = async (args: any): Promise<MediaStream> => {
     }
   }
 
-  const closeBtn = document.getElementById('close-btn')
-  closeBtn.addEventListener('click', () => {
-    close('user-closed')
-  })
-
   const video = document.querySelector('video')
-  video.onloadeddata = () => {
-    if (args.showClose) closeBtn.style.display = 'block'
-  }
-
   return new Promise<MediaStream>((resolve, reject) => {
     if (args.camera) {
       navigator.mediaDevices.getUserMedia(mediaArgs).then(stream => {
@@ -85,8 +73,8 @@ const startMedia = async (args: any): Promise<MediaStream> => {
       })
     } else {
       navigator.mediaDevices.getDisplayMedia(mediaArgs).then(stream => {
-        resolve(stream)
         if (!args.hide) video.srcObject = stream
+        resolve(stream)
       }).catch(e => {
         reject(e)
       })
@@ -155,7 +143,7 @@ const createAnswer = async (pc: RTCPeerConnection, offerSdp: string): Promise<vo
   })
 }
 
-const _createOffer = (pc: RTCPeerConnection) => {
+const createOffer = (pc: RTCPeerConnection) => {
   // wait for candidate
   let sent = false
   pc.onicegatheringstatechange = () => {

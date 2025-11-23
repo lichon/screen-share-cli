@@ -1,4 +1,4 @@
-import { app, BrowserWindow, desktopCapturer, session, ipcMain } from 'electron'
+import { app, BrowserWindow, desktopCapturer, session, ipcMain, Menu } from 'electron'
 import path from 'node:path'
 import started from 'electron-squirrel-startup'
 import yargs from 'yargs/yargs'
@@ -16,12 +16,12 @@ const argv = yargs(hideBin(process.argv))
   .usage('Usage: $0 [options]')
   .option('win-width', {
     number: true,
-    default: 320,
+    default: 480,
     description: 'Set the width of the window',
   })
   .option('win-height', {
     number: true,
-    default: 240,
+    default: 320,
     description: 'Set the height of the window',
   })
   .option('audio', {
@@ -57,15 +57,10 @@ const argv = yargs(hideBin(process.argv))
     default: false,
     description: 'Hide main window',
   })
-  .option('show-close', {
-    boolean: true,
-    default: !hasOfferArg,
-    description: 'Show close button',
-  })
   .option('offer', {
     alias: 'o',
     string: true,
-    description: 'Set offer SDP for WebRTC',
+    description: 'base64 encoded offer',
   })
   .help()
   .alias('help', 'h')
@@ -101,6 +96,19 @@ const createWindow = () => {
 
   mainWindow.on('system-context-menu', (e, params) => {
     e.preventDefault()
+    // add custom context menu here if needed
+    const template = [
+      {
+        label: 'Close',
+        click: () => {
+          process.stdout.write('\u001b9\u0007::SSC:CLOSE:user-closed.\r\n')
+          mainWindow.close()
+          app.quit()
+        },
+      },
+    ]
+    const menu = Menu.buildFromTemplate(template)
+    menu.popup({ window: mainWindow })
   })
 
   // can not read from stdin in packaged electron app
@@ -131,7 +139,7 @@ const createWindow = () => {
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
     // Open the DevTools.
-    mainWindow.webContents.openDevTools()
+    // mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
