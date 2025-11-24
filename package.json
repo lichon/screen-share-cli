@@ -1,6 +1,6 @@
 {
   "name": "screen-share-cli",
-  "productName": "screen-share-cli",
+  "productName": "ssc",
   "version": "1.0.0",
   "description": "Start screen sharing from command line.",
   "main": ".vite/build/main.js",
