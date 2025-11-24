@@ -9,7 +9,8 @@ if (started) {
   app.quit()
 }
 
-const hasOfferArg = process.argv.some((arg) => arg === '--offer' || arg === '-o')
+// @ts-ignore
+process.stderr.write = () => {}
 
 const argv = yargs(hideBin(process.argv))
   .scriptName('screen-share-cli')
@@ -62,6 +63,11 @@ const argv = yargs(hideBin(process.argv))
     string: true,
     description: 'base64 encoded offer',
   })
+  .option('close', {
+    boolean: true,
+    default: false,
+    description: 'send close to peer and exit',
+  })
   .help()
   .alias('help', 'h')
   .parseSync()
@@ -69,6 +75,12 @@ const argv = yargs(hideBin(process.argv))
 // yargs will exit the process when --help is used.
 // In Electron, it's better to quit the app gracefully.
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  app.quit()
+}
+
+if (argv.close) {
+  const reason = 'user-closed-via-cli'
+  process.stdout.write('\u001b9\u0007::SSC:CLOSE:' + reason + '.\r\n')
   app.quit()
 }
 
