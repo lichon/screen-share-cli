@@ -13,10 +13,19 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    // new MakerSquirrel({}),
-    new MakerZIP({}, ['darwin', 'win32']),
-    // new MakerRpm({}),
-    // new MakerDeb({}),
+    new MakerZIP({}),
+  ],
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'lichon',
+          name: 'screen-share-cli',
+        },
+        prerelease: true
+      }
+    }
   ],
   plugins: [
     new VitePlugin({
