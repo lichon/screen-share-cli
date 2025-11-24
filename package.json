@@ -7,6 +7,7 @@
   "scripts": {
     "help": "electron-forge start -- --help",
     "start": "electron-forge start --",
+    "test": "echo \"no test specified\" && exit 0",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
