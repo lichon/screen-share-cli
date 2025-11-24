@@ -10,6 +10,9 @@ on:
 jobs:
   cache-and-publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -21,8 +24,6 @@ jobs:
           node-version: 20
           cache: 'pnpm'
       - run: pnpm install
-      - run: pnpm make --platform win32
-      - run: pnpm make --platform linux
       - run: pnpm run publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
