@@ -1,0 +1,39 @@
+{
+    "version": "0.0.2",
+    "description": "Command-line tool to share screen over WebRTC",
+    "homepage": "https://github.com/lichon/screen-share-cli",
+    "license": "Apache-2.0",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/lichon/screen-share-cli/releases/download/v0.0.2/ssc-win32-x64-0.0.2.zip",
+            "hash": "3eed0aed538a655013a214f2075a4f2156f8d42a98fa9aa96f06a1b1ae465867"
+        }
+    },
+    "installer": {
+        "script": [
+            "$cont = @(",
+            "    'cd $PSScriptRoot'",
+            "    'START ssc.exe $args'",
+            ")",
+            "Set-Content \"$dir\\ssc.ps1\" -Value ($cont -join \"`r`n\") -Encoding Ascii"
+        ]
+    },
+    "uninstaller": {
+        "script": [
+        ]
+    },
+    "bin": [
+        "ssc.ps1"
+    ],
+    "checkver": {
+        "github": "https://github.com/lichon/screen-share-cli",
+        "regex": "tag/([\\w.-]+)"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/lichon/screen-share-cli/releases/download/v$version/ssc-win32-x64-$version.zip"
+            }
+        }
+    }
+}
