@@ -23,7 +23,8 @@ const config: ForgeConfig = {
           owner: 'lichon',
           name: 'screen-share-cli',
         },
-        prerelease: false
+        prerelease: false,
+        generateReleaseNotes: true,
       }
     }
   ],
