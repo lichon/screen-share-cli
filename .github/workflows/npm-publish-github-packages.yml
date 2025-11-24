@@ -22,6 +22,6 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install
       - run: pnpm make -- --platform win32
-      - run: pnpm publish
+      - run: pnpm publish --no-git-checks
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
